@@ -127,7 +127,21 @@ impl Client {
         let device_id = playback.device_id.as_deref();
 
         match request {
-            PlayerRequest::NextTrack => self.spotify.next_track(device_id).await?,
+            PlayerRequest::NextTrack => {
+                if playback.is_automix {
+                    self.spotify.next_track(device_id).await?
+                } else {
+                    //let id = rand::thread_rng().gen_range(0..tracks.len());
+
+                    //client_pub.send(ClientRequest::Player(PlayerRequest::StartPlayback(
+                    //    base_playback.uri_offset(
+                    //        tracks[id].id.uri(),
+                    //        state.configs.app_config.tracks_playback_limit,
+                    //    ),
+                    //    None,
+                    //)))?;
+                }
+            }
             PlayerRequest::PreviousTrack => self.spotify.previous_track(device_id).await?,
             PlayerRequest::Resume => {
                 if !playback.is_playing {

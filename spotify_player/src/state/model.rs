@@ -103,6 +103,7 @@ pub struct SimplifiedPlayback {
     pub repeat_state: rspotify_model::RepeatState,
     pub shuffle_state: bool,
     pub mute_state: Option<u32>,
+    pub is_automix: bool,
 }
 
 #[derive(Debug, Clone)]

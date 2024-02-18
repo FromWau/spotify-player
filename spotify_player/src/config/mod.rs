@@ -77,6 +77,8 @@ pub struct AppConfig {
 
     pub default_device: String,
 
+    pub enable_automix: bool,
+
     pub device: DeviceConfig,
 
     #[cfg(all(feature = "streaming", feature = "notify"))]
@@ -248,6 +250,8 @@ impl Default for AppConfig {
             enable_cover_image_cache: true,
 
             default_device: "spotify-player".to_string(),
+
+            enable_automix: false,
 
             device: DeviceConfig::default(),
 
