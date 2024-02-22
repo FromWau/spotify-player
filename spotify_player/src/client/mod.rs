@@ -139,10 +139,22 @@ impl Client {
                                 let tracks = queue.queue.clone();
                                 let id = rand::thread_rng().gen_range(0..tracks.len());
 
-                                playback.uri_offset(
-                                    tracks[id].id.uri(),
-                                    state.configs.app_config.tracks_playback_limit,
-                                );
+                                let track_uri = match tracks[id] {
+                                    rspotify_model::PlayableItem::Track(_) => Some(tracks[id].id().as_ref().map(|id| id.uri())),
+                                    _ => None,
+                                };
+
+                                if let Some(uri) = track_uri {
+                                    let playback =
+                                        self.spotify.current_playback(None, None::<Vec<_>>).await?;
+
+                                    if let Some(playback) = playback {
+                                        playback.uri_offset(
+                                            uri,
+                                            state.configs.app_config.tracks_playback_limit,
+                                        );
+                                    }
+                                }
 
                                 None
                             } else {
@@ -1173,9 +1185,7 @@ impl Client {
             .await?
             .into_iter()
             .filter_map(|item| match item.track {
-                Some(rspotify_model::PlayableItem::Track(track)) => {
-                    Track::try_from_full_track(track)
-                }
+                Some(Track(track)) => Track::try_from_full_track(track),
                 _ => None,
             })
             .collect::<Vec<_>>();
