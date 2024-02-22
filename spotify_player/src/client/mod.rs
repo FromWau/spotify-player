@@ -108,6 +108,7 @@ impl Client {
     /// handles a player request and returns a new playback on success
     pub async fn handle_player_request(
         &self,
+        state: Option<SharedState>,
         request: PlayerRequest,
         playback: Option<SimplifiedPlayback>,
     ) -> Result<Option<SimplifiedPlayback>> {
@@ -128,20 +129,36 @@ impl Client {
 
         match request {
             PlayerRequest::NextTrack => {
-                if playback.is_automix {
-                    self.spotify.next_track(device_id).await?
-                } else {
-                    //let id = rand::thread_rng().gen_range(0..tracks.len());
+                match state {
+                    Some(state) => {
+                        if !playback.automix_enabled {
+                            let player = state.player.read();
+                            if let Some(queue) = player.queue.as_ref() {
+                                if let Some(tracks) = queue.queue.as_ref() {
+                                    print!("Tracks: {:?}", tracks);
+                                }
+                            } else {
+                                self.spotify.next_track(device_id).await?;
+                            }
 
-                    //client_pub.send(ClientRequest::Player(PlayerRequest::StartPlayback(
-                    //    base_playback.uri_offset(
-                    //        tracks[id].id.uri(),
-                    //        state.configs.app_config.tracks_playback_limit,
-                    //    ),
-                    //    None,
-                    //)))?;
+                            //let id = rand::thread_rng().gen_range(0..tracks.len());
+
+                            //client_pub.send(ClientRequest::Player(PlayerRequest::StartPlayback(
+                            //    base_playback.uri_offset(
+                            //        tracks[id].id.uri(),
+                            //        state.configs.app_config.tracks_playback_limit,
+                            //    ),
+                            //    None,
+                            //)))?;
+                        }
+                    }
+
+                    None => {
+                        self.spotify.next_track(device_id).await?;
+                    }
                 }
             }
+
             PlayerRequest::PreviousTrack => self.spotify.previous_track(device_id).await?,
             PlayerRequest::Resume => {
                 if !playback.is_playing {
@@ -276,7 +293,9 @@ impl Client {
             }
             ClientRequest::Player(request) => {
                 let playback = state.player.read().buffered_playback.clone();
-                let playback = self.handle_player_request(request, playback).await?;
+                let playback = self
+                    .handle_player_request(Some(state.clone()), request, playback)
+                    .await?;
                 state.player.write().buffered_playback = playback;
                 self.update_playback(state);
             }

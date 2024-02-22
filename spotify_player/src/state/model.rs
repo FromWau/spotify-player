@@ -97,13 +97,13 @@ pub enum ItemId {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SimplifiedPlayback {
     pub device_name: String,
+    pub automix_enabled: bool,
     pub device_id: Option<String>,
     pub volume: Option<u32>,
     pub is_playing: bool,
     pub repeat_state: rspotify_model::RepeatState,
     pub shuffle_state: bool,
     pub mute_state: Option<u32>,
-    pub is_automix: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -483,6 +483,7 @@ impl SimplifiedPlayback {
             repeat_state: p.repeat_state,
             shuffle_state: p.shuffle_state,
             mute_state: None,
+            automix_enabled: false,
         }
     }
 }
