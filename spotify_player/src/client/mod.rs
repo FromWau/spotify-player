@@ -140,7 +140,9 @@ impl Client {
                                 let id = rand::thread_rng().gen_range(0..tracks.len());
 
                                 let track_uri = match tracks[id] {
-                                    rspotify_model::PlayableItem::Track(_) => Some(tracks[id].id().as_ref().map(|id| id.uri())),
+                                    rspotify_model::PlayableItem::Track(_) => {
+                                        Some(tracks[id].id().as_ref().map(|id| id.uri()))
+                                    }
                                     _ => None,
                                 };
 
@@ -149,10 +151,21 @@ impl Client {
                                         self.spotify.current_playback(None, None::<Vec<_>>).await?;
 
                                     if let Some(playback) = playback {
-                                        playback.uri_offset(
+                                        let p = playback.uri_offset(
                                             uri,
                                             state.configs.app_config.tracks_playback_limit,
                                         );
+
+                                        self.start_playback(p, device_id).await?;
+                                        // for some reasons, when starting a new playback, the integrated `spotify_player`
+                                        // client doesn't respect the initial shuffle state, so we need to manually update the state
+
+                                        self.spotify
+                                            .shuffle(playback.shuffle_state, device_id)
+                                            .await?;
+
+                                        // after handling `StartPlayback` request, reset the buffered playback
+                                        return Ok(None);
                                     }
                                 }
 
