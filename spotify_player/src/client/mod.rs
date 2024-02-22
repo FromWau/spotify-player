@@ -1,5 +1,7 @@
 use std::{borrow::Cow, collections::HashMap, io::Write, sync::Arc};
 
+use rand::Rng;
+
 #[cfg(feature = "streaming")]
 use crate::streaming;
 use crate::{
@@ -129,33 +131,34 @@ impl Client {
 
         match request {
             PlayerRequest::NextTrack => {
-                match state {
+                let x = match state {
                     Some(state) => {
                         if !playback.automix_enabled {
                             let player = state.player.read();
                             if let Some(queue) = player.queue.as_ref() {
-                                if let Some(tracks) = queue.queue.as_ref() {
-                                    print!("Tracks: {:?}", tracks);
-                                }
+                                let tracks = queue.queue.clone();
+                                let id = rand::thread_rng().gen_range(0..tracks.len());
+
+                                playback.uri_offset(
+                                    tracks[id].id.uri(),
+                                    state.configs.app_config.tracks_playback_limit,
+                                );
+
+                                None
                             } else {
-                                self.spotify.next_track(device_id).await?;
+                                None
                             }
-
-                            //let id = rand::thread_rng().gen_range(0..tracks.len());
-
-                            //client_pub.send(ClientRequest::Player(PlayerRequest::StartPlayback(
-                            //    base_playback.uri_offset(
-                            //        tracks[id].id.uri(),
-                            //        state.configs.app_config.tracks_playback_limit,
-                            //    ),
-                            //    None,
-                            //)))?;
+                        } else {
+                            None
                         }
                     }
 
-                    None => {
-                        self.spotify.next_track(device_id).await?;
-                    }
+                    None => None,
+                };
+
+                match x {
+                    Some(_) => self.spotify.next_track(device_id).await?,
+                    None => self.spotify.next_track(device_id).await?,
                 }
             }
 
