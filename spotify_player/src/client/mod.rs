@@ -1198,7 +1198,9 @@ impl Client {
             .await?
             .into_iter()
             .filter_map(|item| match item.track {
-                Some(Track(track)) => Track::try_from_full_track(track),
+                Some(rspotify_model::PlayableItem::Track(track)) => {
+                    Track::try_from_full_track(track)
+                }
                 _ => None,
             })
             .collect::<Vec<_>>();
