@@ -15,7 +15,11 @@ use anyhow::Result;
 #[cfg(feature = "streaming")]
 use librespot_connect::spirc::Spirc;
 use librespot_core::session::Session;
-use rspotify::{http::Query, model::Market, prelude::*};
+use rspotify::{
+    http::Query,
+    model::{CurrentPlaybackContext, Market},
+    prelude::*,
+};
 
 mod handlers;
 mod spotify;
@@ -147,29 +151,39 @@ impl Client {
                                 };
 
                                 if let Some(uri) = track_uri {
-                                    let playback =
-                                        self.spotify.current_playback(None, None::<Vec<_>>).await?;
+                                    println!("uri: {:?}", uri);
 
-                                    if let Some(playback) = playback {
-                                        let p = playback.uri_offset(
-                                            uri,
-                                            state.configs.app_config.tracks_playback_limit,
-                                        );
+                                    let spotify = Arc::new(self.spotify.clone());
+                                    let playback = {
+                                        let spotify = Arc::clone(&spotify);
+                                        tokio::task::spawn(async move {
+                                            spotify.current_playback(None, None::<Vec<_>>).await
+                                        })
+                                        .await?
+                                    };
 
-                                        self.start_playback(p, device_id).await?;
-                                        // for some reasons, when starting a new playback, the integrated `spotify_player`
-                                        // client doesn't respect the initial shuffle state, so we need to manually update the state
-
-                                        self.spotify
-                                            .shuffle(playback.shuffle_state, device_id)
-                                            .await?;
-
-                                        // after handling `StartPlayback` request, reset the buffered playback
-                                        return Ok(None);
+                                    if let Ok(playback) = playback {
+                                        println!("playback: {:?}", playback);
                                     }
+
+                                    //if let Some(playback) = playback {
+                                    //    let p = playback.uri_offset(
+                                    //        uri,
+                                    //        state.configs.app_config.tracks_playback_limit,
+                                    //    );
+
+                                    //    self.start_playback(p, device_id).await?;
+                                    // for some reasons, when starting a new playback, the integrated `spotify_player`
+                                    // client doesn't respect the initial shuffle state, so we need to manually update the state
+
+                                    //    self.spotify .shuffle(playback.shuffle_state, device_id) .await?;
+
+                                    // after handling `StartPlayback` request, reset the buffered playback
+                                    //return Ok(None);
+                                    //}
                                 }
 
-                                None
+                                Some(playback.clone())
                             } else {
                                 None
                             }
